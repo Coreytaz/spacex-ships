@@ -1,29 +1,33 @@
-import { FC, useState } from "react"
-import styles from './styles.module.scss'
-import { Icon } from "../../../shared/ui/Icon";
-import { DocShip } from "../../../shared/types/types";
 import { Link } from "react-router-dom";
-
-const ProductRowCard: FC<DocShip> = ({ name, home_port, type, id }) => {
-    const [hover, setHover] = useState(false);
-    return (
-        <Link to={`/product/${id}`} style={{ textDecoration: 'none' }}>
-            <div className={styles.rootCard} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-                <div className={styles.productTitle}>
-                    <h2>{name}</h2>
-                </div>
-                <div className={styles.characteristics}>
-                    <div className={styles.type}>
-                        <span>Тип</span><span>{type}</span>
-                    </div>
-                    <div className={styles.port}>
-                        <span>Порт</span><span>{home_port}</span>
-                    </div>
-                </div>
-                {hover ? <div className={styles.arrowRight}><Icon.ArrowRight /></div> : null}
-            </div>
-        </Link>
-    )
+import type { DocShip } from "../../../shared/types/types";
+import { ShipImage } from "../../../shared/ui/components";
+export default function ProductRowCard(ship: DocShip) {
+  return (
+    <Link to={"/product/" + ship.id} className="ship-card">
+      <ShipImage src={ship.image} name={ship.name} />
+      <div className="ship-card-content">
+        <div className="ship-card-top">
+          <span className="ship-type">{ship.type || "Тип не указан"}</span>
+          <span className={"activity" + (ship.active ? " is-active" : "")}>
+            <span aria-hidden="true" />
+            {ship.active ? "В эксплуатации" : "Неактивен"}
+          </span>
+        </div>
+        <h3>{ship.name}</h3>
+        <dl className="ship-card-facts">
+          <div>
+            <dt>Порт приписки</dt>
+            <dd>{ship.home_port || "Не указан"}</dd>
+          </div>
+          <div>
+            <dt>Год постройки</dt>
+            <dd>{ship.year_built ?? "Нет данных"}</dd>
+          </div>
+        </dl>
+        <span className="card-link">
+          Подробнее о корабле <span aria-hidden="true">↗</span>
+        </span>
+      </div>
+    </Link>
+  );
 }
-
-export default ProductRowCard

@@ -1,79 +1,102 @@
-import { FC } from "react"
-import styles from './styles.module.scss'
-import { Button } from "../../shared/ui/Button"
-import { Icon } from "../../shared/ui/Icon"
-import { useNavigate, useParams } from "react-router-dom"
-import { shipsApi } from "../../shared/api/product/shipsApi"
-import useTitle from "../../shared/lib/useTitle"
-
-const ProductPage: FC = () => {
-    const navigate = useNavigate();
-    let { id } = useParams()
-    const { data: ships, isLoading, isError } = shipsApi.useGetShipsQuery(id)
-    useTitle(`${ships ? ships.name : "Корабль не найдена"} | SpaceX Ships`);
-
-    const onPushBack = () => {
-        if (window.history.state && window.history.state.idx > 0) {
-            navigate(-1);
-        } else {
-            navigate('/', { replace: true });
+import { useEffect, useRef } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { shipsApi } from "../../shared/api/product/shipsApi";
+import {
+  ErrorState,
+  LoadingState,
+  ShipImage,
+} from "../../shared/ui/components";
+import useTitle from "../../shared/lib/useTitle";
+export default function ProductPage() {
+  const { id = "" } = useParams();
+  const navigate = useNavigate();
+  const [
+    load,
+    { currentData: ship, isFetching, isError, error, isUninitialized },
+  ] = shipsApi.useLazyGetShipQuery();
+  const activeRequest = useRef<ReturnType<typeof load> | null>(null);
+  useEffect(() => {
+    activeRequest.current = load(id, true);
+    return () => {
+      activeRequest.current?.abort();
+    };
+  }, [id, load]);
+  useTitle((ship?.name || "Корабль") + " | SpaceX Ships");
+  const facts = ship
+    ? [
+        ["Тип корабля", ship.type],
+        ["Порт приписки", ship.home_port],
+        [
+          "Масса",
+          ship.mass_kg === null
+            ? null
+            : ship.mass_kg.toLocaleString("ru-RU") + " кг",
+        ],
+        ["Год постройки", ship.year_built],
+        ["Модель", ship.model],
+        ["Назначение", ship.roles.join(", ")],
+      ]
+    : [];
+  return (
+    <main id="main" className="page-shell detail-page" tabIndex={-1}>
+      <button
+        className="back-link"
+        onClick={() =>
+          window.history.state?.idx > 0
+            ? navigate(-1)
+            : navigate("/", { replace: true })
         }
-    }
-
-    if (isLoading) {
-        return (
-            <div className="container">
-                <section className={styles.layout}>
-                    <h2>Загрузка...</h2>
-                </section>
+      >
+        <span aria-hidden="true">←</span> К каталогу кораблей
+      </button>
+      {isFetching || isUninitialized ? (
+        <LoadingState />
+      ) : isError ? (
+        <>
+          <ErrorState
+            error={error}
+            onRetry={() => {
+              activeRequest.current = load(id);
+            }}
+          />
+          <Link className="text-link" to="/">
+            Открыть каталог
+          </Link>
+        </>
+      ) : (
+        ship && (
+          <>
+            <div className="detail-heading">
+              <p className="eyebrow">ФЛОТ SPACEX / {ship.type || "КОРАБЛЬ"}</p>
+              <h1>
+                {ship.name}
+                <span className="accent">.</span>
+              </h1>
+              <span className={"activity" + (ship.active ? " is-active" : "")}>
+                <span aria-hidden="true" />
+                {ship.active ? "В эксплуатации" : "Неактивен"}
+              </span>
             </div>
-        )
-    }
-
-    if (isError) {
-        return (
-            <div className="container">
-                <section className={styles.layout}>
-                    <h2>Произошла ошибка</h2>
-                </section>
+            <div className="detail-layout">
+              <ShipImage src={ship.image} name={ship.name} large />
+              <section className="detail-facts">
+                <p className="eyebrow">НА БОРТУ</p>
+                <h2>Характеристики</h2>
+                <dl>
+                  {facts.map(([label, value]) => (
+                    <div key={String(label)}>
+                      <dt>{label}</dt>
+                      <dd>
+                        {value === null || value === "" ? "Нет данных" : value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
             </div>
+          </>
         )
-    }
-
-    return (
-        <div className="container">
-            <section className={styles.layout}>
-                <div className={styles.back}>
-                    <Button onClick={onPushBack} icon={<Icon.ArrowLeft />}>Вернуться</Button>
-                </div>
-                <div className={styles.content}>
-                    <div className={styles.title}>
-                        <h2>{ships?.name}</h2>
-                    </div>
-                    <div className={styles.characteristics}>
-                        {ships?.type && <div className={styles.type}>
-                            <span>Тип</span><span>{ships?.type}</span>
-                        </div>}
-                        {ships?.home_port && <div className={styles.port}>
-                            <span>Порт</span><span>{ships?.home_port}</span>
-                        </div>}
-                        {ships?.mass_kg && <div className={styles.weight}>
-                            <span>Вес</span><span>{ships?.mass_kg} кг</span>
-                        </div>}
-                        {ships?.year_built && <div className={styles.years}>
-                            <span>Год</span><span>{ships?.year_built}</span>
-                        </div>}
-                    </div>
-                    {ships?.image ? <div className={styles.img}>
-                        <span>
-                            Картинка
-                        </span>
-                        <img src={ships?.image!} />
-                    </div> : null}
-                </div>
-            </section>
-        </div>
-    )
+      )}
+    </main>
+  );
 }
-
-export default ProductPage

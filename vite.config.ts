@@ -1,17 +1,11 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-import path from 'node:path'
-import { packageDirectorySync } from 'pkg-dir'
-
-const packageRoot = packageDirectorySync()
-
-// https://vitejs.dev/config/
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: {
-      'src': path.resolve(packageRoot, './src'),
-    },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
+    include: ["tests/**/*.test.{ts,tsx}"],
+    restoreMocks: true,
   },
-})
+});
